@@ -112,8 +112,8 @@ android {
         // However, for the very latest UI/Material3 versions, you often need a newer compiler version, 
         // which might be in beta. I'll use 1.9.0-beta03 as it aligns with the 1.9.x compose UI versions.
         // Always check the compatibility matrix for your Compose BOM.
-        // For BOM 2025.07.01 or newer (which aligns with Android 16/Compose 1.9.x), a newer compiler is needed.
-        kotlinCompilerExtensionVersion = "1.9.0-beta03" 
+        // For BOM 2025.06.01 or newer (which aligns with Android 16/Compose 1.9.x), a newer compiler is needed.
+        kotlinCompilerExtensionVersion = "1.5.15" 
     }
 }
 
@@ -133,6 +133,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics) // Updated below in versions
     implementation(libs.androidx.ui.tooling.preview) // Updated below in versions
     implementation(libs.androidx.material3) // Updated below in versions
+
     
     // Test dependencies
     testImplementation("junit:junit:4.13.2") // Latest stable JUnit 4
