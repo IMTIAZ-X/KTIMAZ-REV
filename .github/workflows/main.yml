@@ -21,53 +21,6 @@ jobs:
     runs-on: ubuntu-latest
 
     # Define job-level environment variables here.
-    # The 'runner' context is available at the job level.
-    env:
-      # Set up environment variables for the Android SDK and NDK paths
-      ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
-      ANDROID_NDK_HOME: ${{ runner.tool_cache }}/android-ndk
-      # Define other project-specific environment variables if needed
-      # For instance, if your project has a specific build variant name you want to pass:
-      # MY_BUILD_VARIANT: "MyFlavorDebug"
-
-    steps:
-    - name: 📚 Checkout repository
-      uses: actions/checkout@v4
-
-    - name: ☕ Setup Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: 🤖 Setup Android SDK and NDK
-      # This action automatically uses ANDROID_SDK_ROOT and ANDROID_NDK_HOME
-      # if they are set in the job's environment, or sets them up.
-      uses: android-actions/setup-android@v3
-      with:
-name: Android CI/CD - Build APK
-
-on:
-  push:
-    branches:
-      - main # Trigger on push to the main branch
-      - master # Also support master branch
-  pull_request:
-    branches:
-      - main
-      - master
-  workflow_dispatch: # Allows manual triggering of the workflow
-
-env:
-  # This can remain global as it doesn't use the 'runner' context
-  GRADLE_USER_HOME: ~/.gradle
-
-jobs:
-  build_apk:
-    name: Build Android APK
-    runs-on: ubuntu-latest
-
-    # Define job-level environment variables here.
     env:
       GRADLE_USER_HOME: ~/.gradle
 
@@ -140,5 +93,4 @@ jobs:
       with:
         name: Ktimazstudio-APK
         path: app/build/outputs/apk/release/*.apk
-        retention-days: 7/*.apk
         retention-days: 7
