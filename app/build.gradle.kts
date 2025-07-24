@@ -26,14 +26,37 @@ android {
             }
         }
     }
+    
+    // Define signing configurations here, outside of buildTypes
+    signingConfigs {
+        create("release") {
+            // It's best practice to pass these as environment variables in CI/CD,
+            // or use a local.properties file (which should be .gitignored) for local development.
+            // Using System.getenv() is the correct way to read environment variables in Gradle.
+            storeFile = file(System.getenv("Ktimazstudio.keystore") ?: "app/release.keystore")
+            storePassword = System.getenv("ktimazstudio123")
+            keyAlias = System.getenv("ktimazstudio")
+            keyPassword = System.getenv("ktimazstudio123")
+
+            // Enable all signing schemes for maximum compatibility
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
+    }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            // Reference the defined signingConfig here
+            signingConfig = signingConfigs.release
         }
         debug {
             isMinifyEnabled = false
@@ -79,7 +102,7 @@ android {
     
     externalNativeBuild {
         cmake {
-            path(file('src/main/cpp/CMakeLists.txt')) // This points to your CMakeLists.txt
+            path(file("src/main/cpp/CMakeLists.txt")) // This points to your CMakeLists.txt
             version = "3.22.1" // Or your installed CMake version. This is a common and relatively recent version.
         }
     }
