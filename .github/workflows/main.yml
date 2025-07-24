@@ -12,16 +12,23 @@ on:
   workflow_dispatch: # Allows manual triggering of the workflow
 
 env:
-  # Set up environment variables for the Android SDK and NDK paths
-  ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
-  ANDROID_NDK_HOME: ${{ runner.tool_cache }}/android-ndk
-  # Set the path to the Gradle user home for caching
+  # This can remain global as it doesn't use the 'runner' context
   GRADLE_USER_HOME: ~/.gradle
 
 jobs:
   build_apk:
     name: Build Android APK
     runs-on: ubuntu-latest
+
+    # Define job-level environment variables here.
+    # The 'runner' context is available at the job level.
+    env:
+      # Set up environment variables for the Android SDK and NDK paths
+      ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
+      ANDROID_NDK_HOME: ${{ runner.tool_cache }}/android-ndk
+      # Define other project-specific environment variables if needed
+      # For instance, if your project has a specific build variant name you want to pass:
+      # MY_BUILD_VARIANT: "MyFlavorDebug"
 
     steps:
     - name: 📚 Checkout repository
@@ -34,6 +41,8 @@ jobs:
         java-version: '17'
 
     - name: 🤖 Setup Android SDK and NDK
+      # This action automatically uses ANDROID_SDK_ROOT and ANDROID_NDK_HOME
+      # if they are set in the job's environment, or sets them up.
       uses: android-actions/setup-android@v3
       with:
         api-level: 36
@@ -57,7 +66,6 @@ jobs:
     - name: 🔑 Set up Keystore File
       # This step decodes your base64-encoded keystore file from a GitHub Secret
       # and places it in the expected location (app/Ktimazstudio.keystore).
-      # IMPORTANT: The file name here MUST match the one you intend to use for KEYSTORE_PATH.
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.keystore
@@ -65,9 +73,9 @@ jobs:
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }} # This secret holds the base64 content of your .keystore file
 
-    - name: 🌍 Set Signing Environment Variables
+    - name: 🌍 Set Signing Environment Variables for Gradle
       # These environment variables are read by your build.gradle.kts for signing.
-      # Their values are pulled from GitHub Secrets.
+      # Their values are pulled from GitHub Secrets and then set as job environment variables.
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         # Set KEYSTORE_PATH to the actual path where the keystore file was created
@@ -78,7 +86,7 @@ jobs:
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
         echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
         
-        echo "Signing environment variables set."
+        echo "Signing environment variables set for Gradle."
       env:
         # These are used to provide the secret values to this step for the `echo` commands
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
