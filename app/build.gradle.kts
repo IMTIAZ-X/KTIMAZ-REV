@@ -33,40 +33,39 @@ android {
             // It's best practice to pass these as environment variables in CI/CD,
             // or use a local.properties file (which should be .gitignored) for local development.
             // Using System.getenv() is the correct way to read environment variables in Gradle.
-            storeFile = file(System.getenv("Ktimazstudio.keystore") ?: "app/release.keystore")
-            storePassword = System.getenv("ktimazstudio123")
-            keyAlias = System.getenv("ktimazstudio")
-            keyPassword = System.getenv("ktimazstudio123")
+        storeFile = file(System.getenv("Ktimazstudio.keystore") ?: "app/release.keystore")
+        storePassword = System.getenv("ktimazstudio123")
+        keyAlias = System.getenv("ktimazstudio")
+        keyPassword = System.getenv("ktimazstudio123")
 
-            // Enable all signing schemes for maximum compatibility
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
-            enableV4Signing = true
+        enableV1Signing = true
+        enableV2Signing = true
+        enableV3Signing = true
+        enableV4Signing = true
         }
     }
 
     buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            
-            // Reference the defined signingConfig here
-            signingConfig = signingConfigs.release
-        }
-        debug {
-            isMinifyEnabled = false
-            isShrinkResources = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+    getByName("release") {
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+
+        signingConfig = signingConfigs.getByName("release") // Correct way to reference the signing config
     }
+    debug {
+        isMinifyEnabled = false
+        isShrinkResources = false
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+    }
+}
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
