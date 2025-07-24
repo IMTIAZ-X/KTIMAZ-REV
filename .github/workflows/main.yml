@@ -13,7 +13,6 @@ on:
 
 env:
   # Set up environment variables for the Android SDK and NDK paths
-  # These are standard paths used by GitHub Actions' Android setup.
   ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
   ANDROID_NDK_HOME: ${{ runner.tool_cache }}/android-ndk
   # Set the path to the Gradle user home for caching
@@ -22,8 +21,7 @@ env:
 jobs:
   build_apk:
     name: Build Android APK
-    runs-on: ubuntu-latest # Using ubuntu-latest for cost-effectiveness and good performance.
-                          # For maximum speed, macos-latest can be faster for Android builds.
+    runs-on: ubuntu-latest
 
     steps:
     - name: 📚 Checkout repository
@@ -32,23 +30,18 @@ jobs:
     - name: ☕ Setup Java JDK
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin' # Recommended distribution
-        java-version: '17'      # Android Gradle Plugin often prefers Java 17 for modern builds
+        distribution: 'temurin'
+        java-version: '17'
 
     - name: 🤖 Setup Android SDK and NDK
-      # This action handles installing necessary SDK components, including the NDK and CMake.
-      # It also sets up environment variables like ANDROID_SDK_ROOT and ANDROID_NDK_HOME.
       uses: android-actions/setup-android@v3
       with:
-        api-level: 36 # Your compileSdk version
-        ndk: '26.1.10909125' # A recent stable NDK version compatible with compileSdk 36.
-                             # You can find NDK versions in Android Studio SDK Manager or NDK release notes.
-        cmake: '3.22.1' # Your CMake version from build.gradle.kts
-        build-tools: '34.0.0' # A common recent build tools version. Adjust if needed.
+        api-level: 36
+        ndk: '26.1.10909125' # Ensure this matches your project's NDK version or a compatible one
+        cmake: '3.22.1'      # Ensure this matches your project's CMake version
+        build-tools: '34.0.0'
 
     - name: ⚡ Cache Gradle dependencies
-      # Caching speeds up builds by reusing downloaded dependencies.
-      # The key is based on the Gradle wrapper properties and the build.gradle.kts file.
       uses: actions/cache@v4
       with:
         path: |
@@ -61,52 +54,54 @@ jobs:
     - name: ⚙️ Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    - name: 🔑 Set up Keystore File
+      # This step decodes your base64-encoded keystore file from a GitHub Secret
+      # and places it in the expected location (app/Ktimazstudio.keystore).
+      # IMPORTANT: The file name here MUST match the one you intend to use for KEYSTORE_PATH.
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.keystore
+        echo "Keystore file 'app/Ktimazstudio.keystore' created."
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }} # This secret holds the base64 content of your .keystore file
+
+    - name: 🌍 Set Signing Environment Variables
+      # These environment variables are read by your build.gradle.kts for signing.
+      # Their values are pulled from GitHub Secrets.
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        # Set KEYSTORE_PATH to the actual path where the keystore file was created
+        echo "KEYSTORE_PATH=app/Ktimazstudio.keystore" >> $GITHUB_ENV
+        
+        # Set other signing credentials from GitHub Secrets
+        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+        
+        echo "Signing environment variables set."
+      env:
+        # These are used to provide the secret values to this step for the `echo` commands
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
     - name: 🔍 Run Android Lint checks
-      # Catches potential issues and enforces code style.
-      # This is a good quality gate before building the final APK.
       run: ./gradlew lintDebug
 
     - name: 🧪 Run Unit Tests
-      # Executes local unit tests.
       run: ./gradlew testDebugUnitTest
 
     - name: 📦 Build Debug APK (for quick verification)
-      # Builds a debug APK. This is often faster for initial checks.
       run: ./gradlew assembleDebug
 
     - name: 🚀 Build Release APK
-      # The main build step for the production-ready APK.
-      # This will compile both Kotlin/Java and C++ native code.
-      # Replace `assembleRelease` with `bundleRelease` if you prefer an AAB.
+      # This command will use the signing config defined in build.gradle.kts
+      # which now reads the necessary credentials from the environment variables set above.
       run: ./gradlew assembleRelease
 
-    # Optional: Signing the APK
-    # For a truly professional workflow, you'd sign your release APK.
-    # This requires securely storing your keystore file and credentials as GitHub Secrets.
-    # Example (uncomment and configure if needed):
-    # - name: 🔐 Sign APK
-    #   if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    #   run: |
-    #     echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
-    #     jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
-    #       -keystore app/release.keystore \
-    #       -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-    #       -keypass ${{ secrets.KEY_PASSWORD }} \
-    #       app/build/outputs/apk/release/app-release-unsigned.apk \
-    #       ${{ secrets.ALIAS_NAME }}
-    #     ${ANDROID_SDK_ROOT}/build-tools/34.0.0/zipalign -v 4 \
-    #       app/build/outputs/apk/release/app-release-unsigned.apk \
-    #       app/build/outputs/apk/release/app-release-signed.apk
-    #   env:
-    #     KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-    #     KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-    #     KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-    #     ALIAS_NAME: ${{ secrets.ALIAS_NAME }}
-
     - name: ⬆️ Upload Release APK
-      # Uploads the generated APK as a workflow artifact, making it downloadable from the workflow run.
       uses: actions/upload-artifact@v4
       with:
-        name: MobileARMDisassembler-APK
-        path: app/build/outputs/apk/release/*.apk # Adjust path if you use different flavors/build types
-        retention-days: 5 # How long to keep the artifact
+        name: Ktimazstudio-APK
+        path: app/build/outputs/apk/release/*.apk
+        retention-days: 7
