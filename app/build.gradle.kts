@@ -17,21 +17,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Define signing configurations here
     signingConfigs {
         create("release") {
-            // Fallback debug keystore config for safety
-            val keystorePathEnv = System.getenv("KEYSTORE_PATH")
-            val storeFile = if (!keystorePathEnv.isNullOrEmpty()) file(keystorePathEnv) else file("$rootDir/debug.keystore")
-
-            storeFile = storeFile
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "androiddebugkey"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
-
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
-            enableV4Signing = true
+            // Read keystore path from environment variable
+            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "")
+            // Read keystore password from environment variable
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+            // Read key alias from environment variable
+            keyAlias = System.getenv("KEY_ALIAS") ?: ""
+            // Read key password from environment variable
+            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
         }
     }
 
@@ -43,6 +39,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Apply the 'release' signing config
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
@@ -52,7 +49,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use default debug signing config
+            // Use default debug signing config (no explicit signingConfig needed for debug)
         }
     }
 
@@ -62,7 +59,10 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        // Migrate jvmTarget to compilerOptions DSL as recommended
+        compilerOptions {
+            jvmTarget = JavaVersion.VERSION_11.toString()
+        }
     }
 
     buildFeatures {
