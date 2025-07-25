@@ -18,18 +18,22 @@ android {
     }
 
     signingConfigs {
-    create("release") {
-        storeFile = file(System.getenv("KEYSTORE_PATH") ?: "app/Ktimazstudio.keystore")
-        storePassword = System.getenv("KEYSTORE_PASSWORD")
-        keyAlias = System.getenv("KEY_ALIAS")
-        keyPassword = System.getenv("KEY_PASSWORD")
+        create("release") {
+            // Fallback debug keystore config for safety
+            val keystorePathEnv = System.getenv("KEYSTORE_PATH")
+            val storeFile = if (!keystorePathEnv.isNullOrEmpty()) file(keystorePathEnv) else file("$rootDir/debug.keystore")
 
-        enableV1Signing = true
-        enableV2Signing = true
-        enableV3Signing = true
-        enableV4Signing = true
+            storeFile = storeFile
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
     }
-}
 
     buildTypes {
         getByName("release") {
@@ -48,6 +52,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Use default debug signing config
         }
     }
 
@@ -73,36 +78,38 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15" // Make sure it aligns with your Compose version
+        // This MUST match Compose BOM + Kotlin version
+        kotlinCompilerExtensionVersion = "1.5.10"
     }
 }
 
 dependencies {
-    // Core Libraries
-    implementation(libs.androidx.core.ktx) // androidx-core-ktx
-    implementation(libs.androidx.lifecycle.runtime.ktx) // androidx-lifecycle-runtime-ktx
-    implementation(libs.androidx.activity.compose) // androidx-activity-compose
+    // Compose BOM to align versions
+    implementation(platform(libs.androidx.compose.bom))
 
-    // Compose Libraries
-    implementation(libs.androidx.ui) // androidx-compose.ui
-    implementation(libs.androidx.ui.graphics) // androidx-compose.ui-graphics
-    implementation(libs.androidx.ui.tooling.preview) // androidx-compose.ui-tooling-preview
-    implementation(libs.androidx.material3) // androidx-compose.material3
+    // Core
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
 
-    // Test Dependencies
-    testImplementation(libs.junit) // junit
-    androidTestImplementation(libs.androidx.junit) // androidx-junit
-    androidTestImplementation(libs.androidx.espresso.core) // androidx-espresso-core
-    androidTestImplementation(libs.androidx.ui.test.junit4) // androidx-ui-test-junit4
-    debugImplementation(libs.androidx.ui.tooling) // androidx-ui-tooling
-    debugImplementation(libs.androidx.ui.test.manifest) // androidx-ui-test-manifest
+    // Compose
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+
+    // Testing
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 }
 
 repositories {
     google()
     mavenCentral()
-    // Optional: Add jcenter() if it's necessary for older dependencies
-    // jcenter()
 }
 
 androidComponents {
@@ -125,5 +132,3 @@ androidComponents {
         }
     }
 }
-
-val libs = project.extensions.getByType<VersionCatalogsExtension>().named("libs")
