@@ -1,0 +1,133 @@
+name: Android CI/CD - Build Disassembler APK
+
+on:
+  push:
+    branches:
+      - main # Trigger on push to the main branch
+      - master # Also support master branch
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allows manual triggering of the workflow from GitHub UI
+
+env:
+  # Global environment variables that do not depend on the 'runner' context.
+  # This path is used by Gradle for its caches.
+  GRADLE_USER_HOME: ~/.gradle
+
+jobs:
+  build_apk:
+    name: Build Disassembler Android APK
+    runs-on: ubuntu-latest # Using a Linux runner for efficiency. macos-latest is also an option for faster builds but higher cost.
+
+    # Job-level environment variables. The 'runner' context is available here.
+    env:
+      # Standard Android SDK and NDK root paths on the GitHub Actions runner.
+      ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
+      ANDROID_NDK_HOME: ${{ runner.tool_cache }}/android-ndk
+
+    steps:
+    - name: 📚 Checkout repository
+      # Uses the official action to check out your repository code.
+      uses: actions/checkout@v4
+
+    - name: ☕ Setup Java JDK
+      # Configures the Java Development Kit environment. Android Gradle Plugin (AGP)
+      # typically prefers Java 17 for modern Android builds.
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin' # A widely used and reliable OpenJDK distribution.
+        java-version: '17'      # Specify Java 17.
+
+    - name: 🤖 Setup Android SDK and NDK
+      # This action installs the necessary Android SDK components, including
+      # the specified API level, NDK, and CMake versions. It also sets up
+      # environment variables like ANDROID_HOME and ANDROID_NDK_HOME.
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: 36 # Matches your compileSdk version in build.gradle.kts.
+        ndk: '26.1.10909125' # A recent stable NDK version. Ensure this is compatible with your project.
+        cmake: '3.22.1' # Matches your CMake version from build.gradle.kts.
+        build-tools: '34.0.0' # A common recent build tools version. Adjust if your project requires a specific one.
+
+    - name: ⚡ Cache Gradle dependencies
+      # Caches Gradle's downloaded dependencies and wrapper files to speed up
+      # subsequent workflow runs. The cache key ensures it's invalidated if
+      # build configuration or wrapper properties change.
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: ⚙️ Grant execute permission for gradlew
+      # Ensures the Gradle wrapper script is executable on the Linux runner.
+      run: chmod +x gradlew
+
+    - name: 🔑 Set up Keystore File for Signing
+      # This step securely decodes your base64-encoded keystore file (stored as a GitHub Secret)
+      # and writes it to the 'app/' directory. This file is then used by Gradle for signing.
+      # This step is conditional to only run on pushes to 'main' (or 'master') for security.
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      run: |
+        # The filename 'Ktimazstudio.keystore' must match what your build.gradle.kts expects
+        # when it reads the KEYSTORE_PATH environment variable.
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.keystore
+        echo "Keystore file 'app/Ktimazstudio.keystore' created successfully."
+      env:
+        # The actual base64 content of your .keystore file, stored as a GitHub Secret.
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+
+    - name: 🌍 Set Signing Environment Variables for Gradle
+      # This step sets environment variables that your 'build.gradle.kts' will read
+      # using `System.getenv()`. These variables contain the sensitive signing credentials,
+      # which are securely pulled from GitHub Secrets.
+      # These variables are made available to subsequent steps in the job via $GITHUB_ENV.
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      run: |
+        # Set KEYSTORE_PATH to the actual path where the keystore file was created in the previous step.
+        echo "KEYSTORE_PATH=app/Ktimazstudio.keystore" >> $GITHUB_ENV
+        
+        # Set other signing credentials from GitHub Secrets.
+        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+        
+        echo "Signing environment variables successfully configured for Gradle."
+      env:
+        # These are used to provide the secret values to this specific 'run' step.
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+    - name: 🔍 Run Android Lint checks
+      # Executes static code analysis to find potential bugs, usability, security,
+      # and performance issues. Essential for maintaining code quality.
+      run: ./gradlew lintDebug
+
+    - name: 🧪 Run Unit Tests
+      # Executes your local unit tests. Crucial for verifying code correctness.
+      run: ./gradlew testDebugUnitTest
+
+    - name: 📦 Build Debug APK (for quick verification)
+      # Builds a debug version of the APK. Useful for faster checks during development.
+      run: ./gradlew assembleDebug
+
+    - name: 🚀 Build Release APK
+      # This is the main build step for your production-ready, signed APK.
+      # Gradle will automatically use the signing configuration defined in your
+      # 'build.gradle.kts' and the environment variables set in the previous step.
+      run: ./gradlew assembleRelease
+
+    - name: ⬆️ Upload Release APK
+      # Uploads the generated APK as a workflow artifact, making it downloadable
+      # from the GitHub Actions workflow run summary page.
+      uses: actions/upload-artifact@v4
+      with:
+        name: disassembler-release-apk # Name of the artifact for download.
+        path: app/build/outputs/apk/release/*.apk # Path to your generated APK(s).
+        retention-days: 7 # How long the artifact will be retained (7 days here).
