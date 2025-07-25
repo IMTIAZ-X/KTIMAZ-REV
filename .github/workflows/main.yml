@@ -1,0 +1,72 @@
+name: Build All Components
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # --- C++ Build (using CMake) ---
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v1
+
+      - name: Build C++ with CMake
+        run: |
+          mkdir -p cpp-build
+          cd cpp-build
+          cmake ..
+          cmake --build .
+
+      # --- Kotlin Build (Assuming Android/Gradle) ---
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build Kotlin/Android app
+        run: ./gradlew build
+
+      # --- HTML Build (Static or Node.js, adjust as needed) ---
+      # If your HTML is static, you may only want to check syntax:
+      - name: Validate HTML files
+        run: |
+          sudo apt-get install tidy -y
+          tidy -e $(find . -name "*.html") || true
+
+      # If your HTML needs a Node.js build step (like React/Vue), uncomment below:
+      # - name: Set up Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
+      # - name: Install dependencies and build frontend
+      #   run: |
+      #     cd path/to/html_or_frontend
+      #     npm install
+      #     npm run build
+
+      # --- Artifacts (optional: upload build outputs) ---
+      - name: Upload C++ build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-build
+          path: cpp-build/
+
+      - name: Upload Kotlin build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-build
+          path: app/build/outputs/
+
+      # Add more upload steps for HTML or other outputs if needed
