@@ -3,16 +3,15 @@ name: Android CI/CD - Build APK
 on:
   push:
     branches:
-      - main # Trigger on push to the main branch
-      - master # Also support master branch
+      - main
+      - master
   pull_request:
     branches:
       - main
       - master
-  workflow_dispatch: # Allows manual triggering of the workflow
+  workflow_dispatch:
 
 env:
-  # This can remain global as it doesn't use the 'runner' context
   GRADLE_USER_HOME: ~/.gradle
 
 jobs:
@@ -20,85 +19,75 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
 
-    # Define job-level environment variables here.
-    env:
-      GRADLE_USER_HOME: ~/.gradle
-
     steps:
-    - name: 📚 Checkout repository
-      uses: actions/checkout@v4
+      - name: 📚 Checkout repository
+        uses: actions/checkout@v4
 
-    - name: ☕ Setup Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: ☕ Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: 🤖 Setup Android SDK and NDK
-      uses: android-actions/setup-android@v3
-      with:
-        cmdline-tools-version: 10406996
-        accept-android-sdk-licenses: true
-        packages: |
-           platform-tools
-           platforms;android-34
-           build-tools;34.0.0
-           ndk;26.1.10909125
-           cmake;3.22.1
-       # api-level: 36
-       # ndk: '26.1.10909125'   # Ensure this matches your project's NDK version or a compatible one
-       # cmake: '3.22.1'         # Ensure this matches your project's CMake version
-      #  build-tools: '34.0.0'
+      - name: 🤖 Setup Android SDK and NDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 10406996
+          accept-android-sdk-licenses: true
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+            ndk;26.1.10909125
+            cmake;3.22.1
 
-    - name: ⚡ Cache Gradle dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+      - name: ⚡ Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-    - name: ⚙️ Grant execute permission for gradlew
-      run: chmod +x gradlew
+      - name: ⚙️ Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: 🔑 Set up Keystore File
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.keystore
-        echo "Keystore file 'app/Ktimazstudio.keystore' created."
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      - name: 🔑 Set up Keystore File
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
-    - name: 🌍 Set Signing Environment Variables for Gradle
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        echo "KEYSTORE_PATH=app/Ktimazstudio.keystore" >> $GITHUB_ENV
-        echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
-        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
-        echo "Signing environment variables set for Gradle."
-      env:
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: 🌍 Set Signing Environment Variables for Gradle
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "KEYSTORE_PATH=app/Ktimazstudio.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-    - name: 🔍 Run Android Lint checks
-      run: ./gradlew lintDebug
+      - name: 🔍 Run Android Lint checks
+        run: ./gradlew lintDebug
 
-    - name: 🧪 Run Unit Tests
-      run: ./gradlew testDebugUnitTest
+      - name: 🧪 Run Unit Tests
+        run: ./gradlew testDebugUnitTest
 
-    - name: 📦 Build Debug APK
-      run: ./gradlew assembleDebug
+      - name: 📦 Build Debug APK
+        run: ./gradlew assembleDebug
 
-    - name: 🚀 Build Release APK
-      run: ./gradlew assembleRelease
+      - name: 🚀 Build Release APK
+        run: ./gradlew assembleRelease
 
-    - name: ⬆️ Upload Release APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: Ktimazstudio-APK
-        path: app/build/outputs/apk/release/*.apk
-        retention-days: 7
+      - name: ⬆️ Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ktimazstudio-APK
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 7
