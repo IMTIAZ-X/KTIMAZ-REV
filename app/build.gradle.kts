@@ -6,30 +6,30 @@ plugins {
 
 android {
     namespace = "com.imtiaz.ktimazstudio"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.imtiaz.ktimazstudio"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("Ktimazstudio.keystore") ?: "app/release.keystore")
-            storePassword = System.getenv("ktimazstudio123")
-            keyAlias = System.getenv("ktimazstudio")
-            keyPassword = System.getenv("ktimazstudio123")
+    create("release") {
+        storeFile = file(System.getenv("KEYSTORE_PATH") ?: "app/Ktimazstudio.keystore")
+        storePassword = System.getenv("KEYSTORE_PASSWORD")
+        keyAlias = System.getenv("KEY_ALIAS")
+        keyPassword = System.getenv("KEY_PASSWORD")
 
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
-            enableV4Signing = true
-        }
+        enableV1Signing = true
+        enableV2Signing = true
+        enableV3Signing = true
+        enableV4Signing = true
     }
+}
 
     buildTypes {
         getByName("release") {
