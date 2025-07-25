@@ -11,8 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.disassembler.model.Symbol
-import com.example.disassembler.model.toHexString
+import com.imtiaz.ktimazstudio.model.Symbol
+import com.imtiaz.ktimazstudio.model.toHexString
 
 @Composable
 fun SymbolsView(symbols: List<Symbol>) {

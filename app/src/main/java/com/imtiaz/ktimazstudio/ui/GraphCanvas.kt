@@ -15,9 +15,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.disassembler.model.Instruction
-import com.example.disassembler.model.Symbol
-import com.example.disassembler.model.toHexString
+import com.imtiaz.ktimazstudio.model.Instruction
+import com.imtiaz.ktimazstudio.model.Symbol
+import com.imtiaz.ktimazstudio.model.toHexString
 import android.graphics.Paint
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview

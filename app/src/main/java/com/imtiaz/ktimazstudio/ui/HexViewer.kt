@@ -12,8 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.disassembler.model.toAsciiString
-import com.example.disassembler.model.toHexString
+import com.imtiaz.ktimazstudio.model.toAsciiString
+import com.imtiaz.ktimazstudio.model.toHexString
 
 @Composable
 fun HexViewer(hexData: ByteArray, startOffset: Long, bytesPerRow: Int = 16) {

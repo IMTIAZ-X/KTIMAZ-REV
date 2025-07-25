@@ -17,9 +17,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.disassembler.R
-import com.example.disassembler.model.Bookmark
-import com.example.disassembler.model.toHexString
+import com.imtiaz.ktimazstudio.R
+import com.imtiaz.ktimazstudio.model.Bookmark
+import com.imtiaz.ktimazstudio.model.toHexString
 
 @Composable
 fun BookmarksView(
