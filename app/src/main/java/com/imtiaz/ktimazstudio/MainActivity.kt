@@ -6,10 +6,25 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+// AndroidX and Jetpack Compose imports
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
+
+// Project-specific imports
+import com.imtiaz.ktimazstudio.R // For all your string resources like `disassembly_view_tab`
+import com.imtiaz.ktimazstudio.ui.FileOpen // Assumes FileOpen composable is in ui package
+import com.imtiaz.ktimazstudio.viewmodel.DisassemblyViewModel // Your custom ViewModel
+import com.imtiaz.ktimazstudio.viewmodel.FileLoaderViewModel // Your custom ViewModel
+import com.imtiaz.ktimazstudio.ui.theme.MobileARMDisassemblerTheme // The name of your custom theme
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import com.imtiaz.ktimazstudio.ui.FileOpen // Assumes your FileOpen composable is in ui package
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
