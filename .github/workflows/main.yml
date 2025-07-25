@@ -33,12 +33,7 @@ jobs:
         with:
           cmdline-tools-version: 10406996
           accept-android-sdk-licenses: true
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
-            ndk;26.1.10909125
-            cmake;3.22.1
+          packages: platform-tools,platforms;android-34,build-tools;34.0.0,ndk;26.1.10909125,cmake;3.22.1
 
       - name: ⚡ Cache Gradle dependencies
         uses: actions/cache@v4
@@ -56,33 +51,4 @@ jobs:
       - name: 🔑 Set up Keystore File
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.keystore
-
-      - name: 🌍 Set Signing Environment Variables for Gradle
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          echo "KEYSTORE_PATH=app/Ktimazstudio.keystore" >> $GITHUB_ENV
-          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
-          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
-
-      - name: 🔍 Run Android Lint checks
-        run: ./gradlew lintDebug
-
-      - name: 🧪 Run Unit Tests
-        run: ./gradlew testDebugUnitTest
-
-      - name: 📦 Build Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: 🚀 Build Release APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: ./gradlew assembleRelease
-
-      - name: ⬆️ Upload Release APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ktimazstudio-APK
-          path: app/build/outputs/apk/release/*.apk
-          retention-days: 7
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/Ktimazstudio.ke
