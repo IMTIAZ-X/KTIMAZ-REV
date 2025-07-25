@@ -1,4 +1,4 @@
-name: Android CI/CD - Build Disassembler APK
+name: Android CI/CD - Build KTIMAZ-REV APK
 
 on:
   push:
@@ -21,11 +21,9 @@ jobs:
     name: Build Disassembler Android APK
     runs-on: ubuntu-latest # Using a Linux runner for efficiency. macos-latest is also an option for faster builds but higher cost.
 
-    # Job-level environment variables. The 'runner' context is available here.
-    env:
-      # Standard Android SDK and NDK root paths on the GitHub Actions runner.
-      ANDROID_SDK_ROOT: ${{ runner.tool_cache }}/android-sdk
-      ANDROID_NDK_HOME: ${{ runner.tool_cache }}/android-ndk
+    # Job-level environment variables.
+    # ANDROID_SDK_ROOT and ANDROID_NDK_HOME are set by android-actions/setup-android@v3
+    # so they are removed from here.
 
     steps:
     - name: 📚 Checkout repository
@@ -129,5 +127,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: disassembler-release-apk # Name of the artifact for download.
-        path: app/build/outputs/apk/release/*.apk # Path to your generated APK(s).
+        path: app/build/outputs/apk/release/*.apk # Corrected path to your generated APK(s).
         retention-days: 7 # How long the artifact will be retained (7 days here).
