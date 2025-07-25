@@ -2,6 +2,12 @@ package com.imtiaz.ktimazstudio.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+// For string resources and Compose
+import androidx.compose.ui.res.stringResource
+import com.imtiaz.ktimazstudio.R
+
+// For your custom data class
+import com.imtiaz.ktimazstudio.model.Bookmark // Or the correct path to your Bookmark class
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,17 +23,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.imtiaz.ktimazstudio.model.Bookmark
-import com.imtiaz.ktimazstudio.model.Instruction
-import com.imtiaz.ktimazstudio.model.Symbol
-import com.imtiaz.ktimazstudio.model.toHexString
-import com.imtiaz.ktimazstudio.model.toRawBytesHexString
-import com.imtiaz.ktimazstudio.ui.theme.disassembly_address_color
-import com.imtiaz.ktimazstudio.ui.theme.disassembly_branch_target_color
-import com.imtiaz.ktimazstudio.ui.theme.disassembly_bytes_color
-import com.imtiaz.ktimazstudio.ui.theme.disassembly_comment_color
-import com.imtiaz.ktimazstudio.ui.theme.disassembly_mnemonic_color
-import com.imtiaz.ktimazstudio.ui.theme.disassembly_operand_color
+import com.example.disassembler.model.Bookmark
+import com.example.disassembler.model.Instruction
+import com.example.disassembler.model.Symbol
+import com.example.disassembler.model.toHexString
+import com.example.disassembler.model.toRawBytesHexString
+import com.example.disassembler.ui.theme.disassembly_address_color
+import com.example.disassembler.ui.theme.disassembly_branch_target_color
+import com.example.disassembler.ui.theme.disassembly_bytes_color
+import com.example.disassembler.ui.theme.disassembly_comment_color
+import com.example.disassembler.ui.theme.disassembly_mnemonic_color
+import com.example.disassembler.ui.theme.disassembly_operand_color
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -199,13 +205,13 @@ fun BookmarkDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(id = com.imtiaz.ktimazstudio.R.string.bookmark_name_hint)) },
+                    label = { Text(stringResource(id = com.example.disassembler.R.string.bookmark_name_hint)) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 )
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
-                    label = { Text(stringResource(id = com.imtiaz.ktimazstudio.R.string.bookmark_comment_hint)) },
+                    label = { Text(stringResource(id = com.example.disassembler.R.string.bookmark_comment_hint)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

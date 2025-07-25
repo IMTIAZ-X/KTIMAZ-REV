@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+// Jetpack Compose imports for drawing and theming
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.toPx
+import com.imtiaz.ktimazstudio.ui.theme.MobileARMDisassemblerTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -15,9 +19,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.imtiaz.ktimazstudio.model.Instruction
-import com.imtiaz.ktimazstudio.model.Symbol
-import com.imtiaz.ktimazstudio.model.toHexString
+import com.example.disassembler.model.Instruction
+import com.example.disassembler.model.Symbol
+import com.example.disassembler.model.toHexString
 import android.graphics.Paint
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview

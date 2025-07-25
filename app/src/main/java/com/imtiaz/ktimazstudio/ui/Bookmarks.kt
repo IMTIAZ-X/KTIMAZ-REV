@@ -3,6 +3,8 @@ package com.imtiaz.ktimazstudio.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+// For your string resources like `no_bookmarks`
+import com.imtiaz.ktimazstudio.R
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -17,9 +19,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.imtiaz.ktimazstudio.R
-import com.imtiaz.ktimazstudio.model.Bookmark
-import com.imtiaz.ktimazstudio.model.toHexString
+import com.example.disassembler.R
+import com.example.disassembler.model.Bookmark
+import com.example.disassembler.model.toHexString
 
 @Composable
 fun BookmarksView(
