@@ -17,19 +17,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Define signing configurations here
-    signingConfigs {
-        create("release") {
-            // Read keystore path from environment variable
-            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "")
-            // Read keystore password from environment variable
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-            // Read key alias from environment variable
-            keyAlias = System.getenv("KEY_ALIAS") ?: ""
-            // Read key password from environment variable
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
-        }
-    }
+    // signingConfigs block has been removed as requested.
 
     buildTypes {
         getByName("release") {
@@ -39,8 +27,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Apply the 'release' signing config
-            signingConfig = signingConfigs.getByName("release")
+            // The line 'signingConfig = signingConfigs.getByName("release")' has been removed.
         }
         debug {
             isMinifyEnabled = false
@@ -58,11 +45,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    // This will work but will show a deprecation warning.
     kotlinOptions {
-        // Migrate jvmTarget to compilerOptions DSL as recommended
-        compilerOptions {
-            jvmTarget = JavaVersion.VERSION_11.toString()
-        }
+        jvmTarget = "11"
     }
 
     buildFeatures {
@@ -78,38 +63,28 @@ android {
     }
 
     composeOptions {
-        // This MUST match Compose BOM + Kotlin version
         kotlinCompilerExtensionVersion = "1.5.10"
     }
 }
 
 dependencies {
-    // Compose BOM to align versions
     implementation(platform(libs.androidx.compose.bom))
 
-    // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    // Compose
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-}
-
-repositories {
-    google()
-    mavenCentral()
 }
 
 androidComponents {
