@@ -2,8 +2,8 @@ package com.imtiaz.ktimazstudio.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.disassembler.model.Symbol
-import com.example.disassembler.utils.AppThreadPool
+import com.imtiaz.ktimazstudio.model.Symbol
+import com.imtiaz.ktimazstudio.utils.AppThreadPool
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
