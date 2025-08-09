@@ -1,0 +1,57 @@
+<resources>
+    <string name="app_name">Ktimaz-ARM Disassembler M</string>
+    
+    <!-- Tab Names -->
+    <string name="disassembly_view_tab">Disassembly</string>
+    <string name="hex_view_tab">Hex View</string>
+    <string name="symbols_tab">Symbols</string>
+    <string name="bookmarks_tab">Bookmarks</string>
+    <string name="graph_view_tab">Graph</string>
+    
+    <!-- Loading States -->
+    <string name="parsing_progress">Parsing: %d%%</string>
+    <string name="parsing_failed">Parsing failed: %s</string>
+    
+    <!-- Search -->
+    <string name="search_hint">Search instructions, addresses, symbols...</string>
+    
+    <!-- Bookmarks -->
+    <string name="bookmark_name_hint">Bookmark name</string>
+    <string name="bookmark_comment_hint">Comment (optional)</string>
+    <string name="bookmark_added">Bookmark added</string>
+    <string name="no_bookmarks">No bookmarks yet. Long press on an instruction to add one.</string>
+    
+    <!-- File Operations -->
+    <string name="select_elf_file">Select ELF File</string>
+    <string name="file_load_error">Failed to load file: %s</string>
+    
+    <!-- General Messages -->
+    <string name="no_data_available">No data available</string>
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="success">Success</string>
+    
+    <!-- Permissions -->
+    <string name="storage_permission_required">Storage permission is required to load files</string>
+    <string name="permission_denied">Permission denied</string>
+    
+    <!-- Menu Items -->
+    <string name="open_file">Open File</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
+    
+    <!-- Dialog Actions -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Content Descriptions -->
+    <string name="open_file_description">Open ELF file</string>
+    <string name="settings_description">Open settings</string>
+    <string name="about_description">About this app</string>
+    <string name="search_description">Search</string>
+    <string name="clear_search_description">Clear search</string>
+    <string name="bookmark_description">Bookmark</string>
+    <string name="remove_bookmark_description">Remove bookmark</string>
+</resources>
