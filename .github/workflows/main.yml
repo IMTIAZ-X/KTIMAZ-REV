@@ -1,0 +1,375 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ published ]
+
+env:
+  # Android SDK/NDK versions
+  ANDROID_COMPILE_SDK: 34
+  ANDROID_BUILD_TOOLS: 34.0.0
+  ANDROID_SDK_TOOLS: 11076708
+  ANDROID_NDK_VERSION: 25.2.9519653
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint Check
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run Kotlin linter
+        run: ./gradlew ktlintCheck
+
+      - name: Run Android linter
+        run: ./gradlew lintDebug
+
+      - name: Upload lint results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-results
+          path: app/build/reports/
+
+  test:
+    runs-on: ubuntu-latest
+    name: Unit Tests
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Generate test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Test Results
+          path: '**/TEST-*.xml'
+          reporter: java-junit
+          fail-on-error: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: app/build/test-results/
+
+  build:
+    runs-on: ubuntu-latest
+    name: Build APK
+    needs: [lint, test]
+    strategy:
+      matrix:
+        variant: [debug, release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          echo "y" | sdkmanager "ndk;$ANDROID_NDK_VERSION"
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache NDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            $ANDROID_SDK_ROOT/ndk/${{ env.ANDROID_NDK_VERSION }}
+          key: ${{ runner.os }}-ndk-${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Decode Keystore (Release only)
+        if: matrix.variant == 'release' && github.event_name == 'release'
+        uses: timheuer/base64-to-file@v1.2
+        with:
+          fileName: 'release_keystore.jks'
+          fileDir: './app/'
+          encodedString: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Build ${{ matrix.variant }} APK
+        env:
+          KEYSTORE_PATH: ${{ github.event_name == 'release' && matrix.variant == 'release' && './app/release_keystore.jks' || '' }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ "${{ matrix.variant }}" == "release" ] && [ "${{ github.event_name }}" == "release" ]; then
+            echo "Building signed release APK"
+            ./gradlew assembleRelease \
+              -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+              -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+              -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+              -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+          else
+            echo "Building ${{ matrix.variant }} APK"
+            ./gradlew assemble${{ matrix.variant == 'debug' && 'Debug' || 'Release' }}
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.variant }}
+          path: app/build/outputs/apk/${{ matrix.variant }}/*.apk
+
+  instrumentation-test:
+    runs-on: ubuntu-latest
+    name: Instrumentation Tests
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          echo "y" | sdkmanager "ndk;$ANDROID_NDK_VERSION"
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.ANDROID_COMPILE_SDK }}
+
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_COMPILE_SDK }}
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_COMPILE_SDK }}
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest
+
+      - name: Upload instrumentation test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: instrumentation-test-results
+          path: app/build/reports/androidTests/
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-debug
+
+      - name: Run MobSF Security Scan
+        uses: fundacaocerti/mobsf-action@v1.7.1
+        with:
+          input-file-path: ./app-debug.apk
+          mobsf-url: https://mobsf.live
+          mobsf-api-key: ${{ secrets.MOBSF_API_KEY }}
+
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: mobsf-results.json
+
+  performance-test:
+    runs-on: ubuntu-latest
+    name: Performance Tests
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run benchmark tests
+        run: ./gradlew benchmarkDebugAndroidTest
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results
+          path: app/build/reports/benchmark/
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Play Store
+    needs: [build, instrumentation-test, security-scan]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-release
+
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_CONSOLE_SERVICE_ACCOUNT }}
+          packageName: com.imtiaz.ktimazrev
+          releaseFiles: app-release.apk
+          track: internal # or 'alpha', 'beta', 'production'
+          status: completed
+          inAppUpdatePriority: 2
+
+  notification:
+    runs-on: ubuntu-latest
+    name: Notification
+    needs: [build, test, lint]
+    if: always()
+    steps:
+      - name: Notify Success
+        if: ${{ needs.build.result == 'success' && needs.test.result == 'success' && needs.lint.result == 'success' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#ci-cd'
+          text: '✅ Build successful for ${{ github.repository }} on branch ${{ github.ref }}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify Failure
+        if: ${{ needs.build.result == 'failure' || needs.test.result == 'failure' || needs.lint.result == 'failure' }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#ci-cd'
+          text: '❌ Build failed for ${{ github.repository }} on branch ${{ github.ref }}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
