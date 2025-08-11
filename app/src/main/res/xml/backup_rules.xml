@@ -2,12 +2,15 @@
    Sample backup rules file; uncomment and customize as necessary.
    See https://developer.android.com/guide/topics/data/autobackup
    for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+   Note: This file is ignored when the application is configured not to support auto backup.
+   (by setting android:allowBackup="false").
+
+   Customize the rules based on the actual data and files your application uses.
+   In this example, the rules exclude all databases and all shared preferences.
 -->
 <full-backup-content>
     <!--
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>
--->
+   -->
 </full-backup-content>

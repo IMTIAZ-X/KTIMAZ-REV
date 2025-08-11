@@ -5,16 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.imtiaz.ktimazrev.model.Bookmark
 import com.imtiaz.ktimazrev.model.Instruction
 import com.imtiaz.ktimazrev.model.Symbol
+import com.imtiaz.ktimazrev.model.toHexString
 import com.imtiaz.ktimazrev.utils.AppThreadPool
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DisassemblyViewModel : ViewModel() {
-
     // --- State Management ---
     private val _instructions = MutableStateFlow<List<Instruction>>(emptyList())
     val instructions: StateFlow<List<Instruction>> = _instructions.asStateFlow()
@@ -35,38 +35,47 @@ class DisassemblyViewModel : ViewModel() {
     val currentTab: StateFlow<MainTab> = _currentTab.asStateFlow()
 
     // Combined flow for filtered instructions based on search query
-    val filteredInstructions: StateFlow<List<Instruction>> = combine(
-        _instructions,
-        _searchQuery
-    ) { instructions, query ->
-        if (query.isBlank()) {
-            instructions
-        } else {
-            instructions.filter {
-                it.mnemonic.contains(query, ignoreCase = true) ||
-                it.operands.contains(query, ignoreCase = true) ||
-                it.comment.contains(query, ignoreCase = true) ||
-                it.address.toHexString().contains(query, ignoreCase = true)
+    val filteredInstructions: StateFlow<List<Instruction>> =
+        combine(
+            _instructions,
+            _searchQuery,
+        ) { instructions, query ->
+            if (query.isBlank()) {
+                instructions
+            } else {
+                instructions.filter {
+                    it.mnemonic.contains(query, ignoreCase = true) ||
+                        it.operands.contains(query, ignoreCase = true) ||
+                        it.comment.contains(query, ignoreCase = true) ||
+                        it.address.toHexString().contains(query, ignoreCase = true)
+                }
             }
-        }
-    }.asStateFlow()
+        }.stateIn(
+            scope = viewModelScope,
+            started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(),
+            initialValue = emptyList(),
+        )
 
     // --- Native Methods (declared in JNI) ---
     external fun getDisassembledInstructionsNative(
         sectionName: String,
         baseAddress: Long,
-        isThumbMode: Boolean
+        isThumbMode: Boolean,
     ): Array<Instruction>?
 
     external fun getHexDumpNative(
         sectionName: String,
         offset: Long,
-        length: Int
+        length: Int,
     ): ByteArray?
 
     // --- Public Functions for UI Interaction ---
 
-    fun loadDisassemblyForSection(sectionName: String, baseAddress: Long, isThumbMode: Boolean = false) {
+    fun loadDisassemblyForSection(
+        sectionName: String,
+        baseAddress: Long,
+        isThumbMode: Boolean = false,
+    ) {
         _currentSection.value = sectionName
         viewModelScope.launch(AppThreadPool.IO) {
             try {
@@ -76,7 +85,9 @@ class DisassemblyViewModel : ViewModel() {
                 _hexDumpData.value = hexData
 
                 val disassembledArray = getDisassembledInstructionsNative(
-                    sectionName, baseAddress, isThumbMode
+                    sectionName,
+                    baseAddress,
+                    isThumbMode,
                 )
                 _instructions.value = disassembledArray?.toList() ?: emptyList()
                 println("Disassembled ${instructions.value.size} instructions for section $sectionName")
@@ -87,16 +98,16 @@ class DisassemblyViewModel : ViewModel() {
         }
     }
 
-    fun addBookmark(address: Long, name: String, comment: String) {
-        _bookmarks.update { currentBookmarks ->
-            (currentBookmarks + Bookmark(address, name, comment)).sortedBy { it.address }
-        }
+    fun addBookmark(
+        address: Long,
+        name: String,
+        comment: String,
+    ) {
+        _bookmarks.value = (_bookmarks.value + Bookmark(address, name, comment)).sortedBy { it.address }
     }
 
     fun removeBookmark(bookmark: Bookmark) {
-        _bookmarks.update { currentBookmarks ->
-            currentBookmarks.filter { it != bookmark }
-        }
+        _bookmarks.value = _bookmarks.value.filter { it != bookmark }
     }
 
     fun updateSearchQuery(query: String) {
@@ -109,5 +120,9 @@ class DisassemblyViewModel : ViewModel() {
 }
 
 enum class MainTab {
-    Disassembly, HexView, Symbols, Bookmarks, GraphView
+    Disassembly,
+    HexView,
+    Symbols,
+    Bookmarks,
+    GraphView,
 }

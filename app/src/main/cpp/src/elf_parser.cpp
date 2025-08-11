@@ -1,13 +1,68 @@
 #include "../include/elf_parser.h"
 #include "../include/utils.h"
-#include <cstring> // For memcpy
-#include <algorithm> // For std::min
-#include <endian.h> // For htobe64, le64toh etc. (Linux/Android specific)
+#include <cstring>
+#include <algorithm>
+#include <endian.h>
 
-// ELF magic numbers
+// ELF magic numbers and constants
 const uint8_t ELFMAG[4] = {0x7F, 'E', 'L', 'F'};
 
-// Helper for endianness conversion
+// ELF identification indices
+enum ElfIdent {
+    EI_MAG0       = 0,     // File magic byte 0
+    EI_MAG1       = 1,     // File magic byte 1
+    EI_MAG2       = 2,     // File magic byte 2
+    EI_MAG3       = 3,     // File magic byte 3
+    EI_CLASS      = 4,     // File class (32/64-bit)
+    EI_DATA       = 5,     // Data encoding (endianness)
+    EI_VERSION    = 6,     // ELF header version
+    EI_OSABI      = 7,     // OS/ABI identification
+    EI_ABIVERSION = 8,     // ABI version
+    EI_PAD        = 9      // Start of padding bytes
+};
+
+// ELF class values
+enum ElfClass {
+    ELFCLASSNONE = 0, // Invalid class
+    ELFCLASS32   = 1, // 32-bit objects
+    ELFCLASS64   = 2  // 64-bit objects
+};
+
+// ELF data encoding values
+enum ElfData {
+    ELFDATANONE = 0, // Invalid data encoding
+    ELFDATA2LSB = 1, // Little-endian
+    ELFDATA2MSB = 2  // Big-endian
+};
+
+// ELF version values
+enum ElfVersion {
+    EV_NONE    = 0, // Invalid version
+    EV_CURRENT = 1  // Current version
+};
+
+// Section types
+enum SectionType {
+    SHT_NULL     = 0,  // Inactive
+    SHT_PROGBITS = 1,  // Program data
+    SHT_SYMTAB   = 2,  // Symbol table
+    SHT_STRTAB   = 3,  // String table
+    SHT_RELA     = 4,  // Relocation entries, addends
+    SHT_HASH     = 5,  // Symbol hash table
+    SHT_DYNAMIC  = 6,  // Dynamic linking information
+    SHT_NOTE     = 7,  // Notes
+    SHT_NOBITS   = 8,  // Program space with no data (bss)
+    SHT_REL      = 9,  // Relocation entries, no addends
+    SHT_SHLIB    = 10, // Reserved
+    SHT_DYNSYM   = 11  // Dynamic linker symbol table
+};
+
+// Special section indices
+enum SectionIndex {
+    SHN_UNDEF = 0 // Undefined section
+};
+
+// Helper function for endianness conversion
 template<typename T>
 T swap_endian(T val) {
     if constexpr (sizeof(T) == 2) {
@@ -20,6 +75,7 @@ T swap_endian(T val) {
     return val; // Should not happen for standard types
 }
 
+// Template specialization for read_value
 template<typename T>
 T ElfParser::read_value(size_t offset) const {
     if (offset + sizeof(T) > file_.size) {
@@ -34,7 +90,7 @@ T ElfParser::read_value(size_t offset) const {
 }
 
 ElfParser::ElfParser(const MappedFile& file) : file_(file) {
-    if (file_.data == nullptr || file_.size < 64) { // Minimum ELF header size is 64 for 64-bit
+    if (file_.data == nullptr || file_.size < 52) { // Minimum ELF header size is 52 for 32-bit
         throw std::runtime_error("Invalid or empty MappedFile for ElfParser.");
     }
 }
@@ -83,10 +139,10 @@ bool ElfParser::read_elf_header() {
         return false;
     }
 
-    // Determine 32/64-bit and endianness from e_ident
-    header_.e_ident[EI_CLASS] = file_.data[EI_CLASS];
-    header_.e_ident[EI_DATA] = file_.data[EI_DATA];
+    // Copy the full e_ident array
+    memcpy(header_.e_ident, file_.data, 16);
 
+    // Determine 32/64-bit and endianness from e_ident
     header_.is_64bit = (header_.e_ident[EI_CLASS] == ELFCLASS64);
     header_.is_little_endian = (header_.e_ident[EI_DATA] == ELFDATA2LSB);
 
@@ -98,6 +154,7 @@ bool ElfParser::read_elf_header() {
         return false;
     }
 
+    // Lambda functions for safe endian-aware reading
     auto read_u16 = [&](size_t offset) {
         uint16_t val;
         memcpy(&val, file_.data + offset, 2);
@@ -114,10 +171,13 @@ bool ElfParser::read_elf_header() {
         return header_.is_little_endian ? val : swap_endian(val);
     };
 
+    // Read header fields
     header_.e_type = read_u16(0x10);
     header_.e_machine = read_u16(0x12);
     header_.e_version = read_u32(0x14);
+    
     if (header_.is_64bit) {
+        // ELF64 layout
         header_.e_entry = read_u64(0x18);
         header_.e_phoff = read_u64(0x20);
         header_.e_shoff = read_u64(0x28);
@@ -128,7 +188,8 @@ bool ElfParser::read_elf_header() {
         header_.e_shentsize = read_u16(0x3A);
         header_.e_shnum = read_u16(0x3C);
         header_.e_shstrndx = read_u16(0x3E);
-    } else { // 32-bit
+    } else {
+        // ELF32 layout
         header_.e_entry = read_u32(0x18);
         header_.e_phoff = read_u32(0x1C);
         header_.e_shoff = read_u32(0x20);
@@ -180,6 +241,7 @@ bool ElfParser::read_section_headers() {
         SectionHeader sh;
 
         if (header_.is_64bit) {
+            // ELF64 section header layout
             sh.sh_name = read_value<uint32_t>(current_sh_offset + 0x00);
             sh.sh_type = read_value<uint32_t>(current_sh_offset + 0x04);
             sh.sh_flags = read_value<uint64_t>(current_sh_offset + 0x08);
@@ -190,7 +252,8 @@ bool ElfParser::read_section_headers() {
             sh.sh_info = read_value<uint32_t>(current_sh_offset + 0x2C);
             sh.sh_addralign = read_value<uint64_t>(current_sh_offset + 0x30);
             sh.sh_entsize = read_value<uint64_t>(current_sh_offset + 0x38);
-        } else { // 32-bit
+        } else {
+            // ELF32 section header layout
             sh.sh_name = read_value<uint32_t>(current_sh_offset + 0x00);
             sh.sh_type = read_value<uint32_t>(current_sh_offset + 0x04);
             sh.sh_flags = read_value<uint32_t>(current_sh_offset + 0x08);
@@ -223,6 +286,7 @@ bool ElfParser::resolve_section_names() {
         log_error("Section header string table extends beyond file size.");
         return false;
     }
+    
     shstrtab_data_ = std::string_view(
         reinterpret_cast<const char*>(file_.data + shstrtab_sh.sh_offset),
         shstrtab_sh.sh_size
@@ -230,21 +294,31 @@ bool ElfParser::resolve_section_names() {
 
     for (auto& sh : section_headers_) {
         if (sh.sh_name < shstrtab_data_.size()) {
-            sh.name = shstrtab_data_.data() + sh.sh_name;
+            const char* name_ptr = shstrtab_data_.data() + sh.sh_name;
+            // Ensure null-terminated string
+            size_t max_len = shstrtab_data_.size() - sh.sh_name;
+            size_t actual_len = strnlen(name_ptr, max_len);
+            sh.name = std::string(name_ptr, actual_len);
         } else {
             sh.name = "<invalid_name>";
             log_error("Invalid section name offset: " + std::to_string(sh.sh_name));
         }
 
-        // Cache common string tables
+        // Cache common string tables for symbol resolution
         if (sh.name == ".strtab") {
-            strtab_data_ = std::string_view(
-                reinterpret_cast<const char*>(file_.data + sh.sh_offset), sh.sh_size
-            );
+            if (sh.sh_offset + sh.sh_size <= file_.size) {
+                strtab_data_ = std::string_view(
+                    reinterpret_cast<const char*>(file_.data + sh.sh_offset), 
+                    sh.sh_size
+                );
+            }
         } else if (sh.name == ".dynstr") {
-            dynstrtab_data_ = std::string_view(
-                reinterpret_cast<const char*>(file_.data + sh.sh_offset), sh.sh_size
-            );
+            if (sh.sh_offset + sh.sh_size <= file_.size) {
+                dynstrtab_data_ = std::string_view(
+                    reinterpret_cast<const char*>(file_.data + sh.sh_offset), 
+                    sh.sh_size
+                );
+            }
         }
     }
     return true;
@@ -270,13 +344,15 @@ bool ElfParser::read_symbols() {
                 SymbolEntry sym;
 
                 if (header_.is_64bit) {
+                    // ELF64 symbol table entry layout
                     sym.st_name = read_value<uint32_t>(current_sym_offset + 0x00);
                     sym.st_info = read_value<uint8_t>(current_sym_offset + 0x04);
                     sym.st_other = read_value<uint8_t>(current_sym_offset + 0x05);
                     sym.st_shndx = read_value<uint16_t>(current_sym_offset + 0x06);
                     sym.st_value = read_value<uint64_t>(current_sym_offset + 0x08);
                     sym.st_size = read_value<uint64_t>(current_sym_offset + 0x10);
-                } else { // 32-bit
+                } else {
+                    // ELF32 symbol table entry layout
                     sym.st_name = read_value<uint32_t>(current_sym_offset + 0x00);
                     sym.st_value = read_value<uint32_t>(current_sym_offset + 0x04);
                     sym.st_size = read_value<uint32_t>(current_sym_offset + 0x08);
@@ -297,14 +373,18 @@ void ElfParser::resolve_symbol_names() {
 
         // Determine which string table to use based on symbol binding/type or section type
         // This is a simplified heuristic; real ELF linking can be complex.
-        if (sh_type_is_dynamic(section_headers_[sym.st_shndx].sh_type)) { // A rough check
+        if (sym.st_shndx < section_headers_.size() && 
+            sh_type_is_dynamic(section_headers_[sym.st_shndx].sh_type)) {
              target_strtab = &dynstrtab_data_;
         } else {
             target_strtab = &strtab_data_;
         }
 
-        if (target_strtab && sym.st_name < target_strtab->size()) {
-            sym.name = target_strtab->data() + sym.st_name;
+        if (target_strtab && !target_strtab->empty() && sym.st_name < target_strtab->size()) {
+            const char* name_ptr = target_strtab->data() + sym.st_name;
+            size_t max_len = target_strtab->size() - sym.st_name;
+            size_t actual_len = strnlen(name_ptr, max_len);
+            sym.name = std::string(name_ptr, actual_len);
         } else {
             sym.name = "<unnamed>";
         }
@@ -342,53 +422,7 @@ uint64_t ElfParser::get_section_address(const std::string& section_name) const {
     return 0;
 }
 
-// Minimal ELF constants for parsing (can be expanded)
-enum ElfIdent {
-    EI_MAG0       = 0,     // File magic byte 0
-    EI_MAG1       = 1,     // File magic byte 1
-    EI_MAG2       = 2,     // File magic byte 2
-    EI_MAG3       = 3,     // File magic byte 3
-    EI_CLASS      = 4,     // File class (32/64-bit)
-    EI_DATA       = 5,     // Data encoding (endianness)
-    EI_VERSION    = 6,     // ELF header version
-    EI_OSABI      = 7,     // OS/ABI identification
-    EI_ABIVERSION = 8,     // ABI version
-    EI_PAD        = 9      // Start of padding bytes
-};
-
-enum ElfClass {
-    ELFCLASSNONE = 0, // Invalid class
-    ELFCLASS32   = 1, // 32-bit objects
-    ELFCLASS64   = 2  // 64-bit objects
-};
-
-enum ElfData {
-    ELFDATANONE = 0, // Invalid data encoding
-    ELFDATA2LSB = 1, // Little-endian
-    ELFDATA2MSB = 2  // Big-endian
-};
-
-enum ElfVersion {
-    EV_NONE    = 0, // Invalid version
-    EV_CURRENT = 1  // Current version
-};
-
-enum SectionType {
-    SHT_NULL     = 0, // Inactive
-    SHT_PROGBITS = 1, // Program data
-    SHT_SYMTAB   = 2, // Symbol table
-    SHT_STRTAB   = 3, // String table
-    SHT_RELA     = 4, // Relocation entries, addends
-    SHT_HASH     = 5, // Symbol hash table
-    SHT_DYNAMIC  = 6, // Dynamic linking information
-    SHT_NOTE     = 7, // Notes
-    SHT_NOBITS   = 8, // Program space with no data (bss)
-    SHT_REL      = 9, // Relocation entries, no addends
-    SHT_SHLIB    = 10, // Reserved
-    SHT_DYNSYM   = 11 // Dynamic linker symbol table
-};
-
-// Helper to check if a section type is typically associated with dynamic linking
+// Helper function to check if a section type is typically associated with dynamic linking
 bool sh_type_is_dynamic(uint32_t sh_type) {
     return sh_type == SHT_DYNAMIC || sh_type == SHT_DYNSYM;
 }

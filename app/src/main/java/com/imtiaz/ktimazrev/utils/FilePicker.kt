@@ -8,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 
 class FilePicker(private val activity: FragmentActivity) {
 
@@ -16,7 +15,9 @@ class FilePicker(private val activity: FragmentActivity) {
     private var pickFileLauncher: ActivityResultLauncher<Array<String>>
 
     init {
-        pickFileLauncher = activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        pickFileLauncher = activity.registerForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri: Uri? ->
             uri?.let {
                 val filePath = getPathFromUri(activity, it)
                 onFilePicked?.invoke(filePath)
@@ -30,10 +31,19 @@ class FilePicker(private val activity: FragmentActivity) {
         onFilePicked = callback
         // MIME types for common executable files: application/octet-stream for generic binary
         // You might need to add more specific types if targeting specific ELF variants.
-        pickFileLauncher.launch(arrayOf("application/octet-stream", "application/x-executable", "application/x-elf"))
+        pickFileLauncher.launch(
+            arrayOf(
+                "application/octet-stream",
+                "application/x-executable",
+                "application/x-elf",
+            ),
+        )
     }
 
-    private fun getPathFromUri(context: Context, uri: Uri): String? {
+    private fun getPathFromUri(
+        context: Context,
+        uri: Uri,
+    ): String? {
         // This method needs to copy the file to a temporary location
         // because mmap (used in native code) requires a direct file path,
         // and SAF URIs often don't provide one directly.
@@ -53,7 +63,10 @@ class FilePicker(private val activity: FragmentActivity) {
         }
     }
 
-    private fun getFileName(context: Context, uri: Uri): String? {
+    private fun getFileName(
+        context: Context,
+        uri: Uri,
+    ): String? {
         var result: String? = null
         if (uri.scheme == "content") {
             val cursor = context.contentResolver.query(uri, null, null, null, null)

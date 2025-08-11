@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FileLoaderViewModel : ViewModel() {
-
     // States for UI
     private val _loadingState = MutableStateFlow<LoadingState>(LoadingState.Idle)
     val loadingState: StateFlow<LoadingState> = _loadingState.asStateFlow()
@@ -26,7 +25,9 @@ class FileLoaderViewModel : ViewModel() {
 
     // Native methods (declared in JNI)
     external fun loadFileAndParseNative(filePath: String)
+
     external fun getElfSectionNamesNative(): Array<String>?
+
     external fun getElfSymbolsNative(): Array<Symbol>?
 
     // Initialize native library
@@ -94,8 +95,12 @@ class FileLoaderViewModel : ViewModel() {
 }
 
 sealed class LoadingState {
+
     object Idle : LoadingState()
+
     data class Loading(val progress: Int) : LoadingState()
+
     object Success : LoadingState()
+
     data class Error(val message: String) : LoadingState()
 }
